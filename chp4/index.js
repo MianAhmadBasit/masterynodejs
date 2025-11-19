@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
 const port = 8000;
-
+const fs = require('node:fs');
 
 // in Memopry data store
 let books = [
@@ -13,6 +13,46 @@ let books = [
 
 // Middleware to parse JSON bodies /(plugin)
 app.use(express.json());
+
+
+
+// app.use((req,res,next)=>{
+//     console.log('Request URL: ' + req.url);
+//     res.json({message: 'Middleware executed'});
+//     next();
+// });
+
+app.use((req,res,next)=>{
+    console.log(``);
+    fs.appendFileSync('requests.log', `${new Date().toISOString()} - ${req.method} ${req.url} ${req.path}  \n ${JSON.stringify(req.body)} \n ${Date.now()}`);  
+    next();
+});
+
+
+
+
+app.use((req,res,next)=>{
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next();
+});
+
+// Custom Middleware for logging
+app.use((req,res,next)=>{
+    console.log('Request received at ' + new Date().toISOString());
+    next();
+});
+
+
+
+
+app.use((req,res,next)=>{
+    console.log(`${req.method} ${req.url}`);
+    next();
+});
+
+
 
 
 // Routes
@@ -67,7 +107,20 @@ else{
 
     res.status(201).json({message: 'Book created successfully'});
 });
-
+// put update book
+app.put('/books/:id', (req,res)=>{
+    const bookId = parseInt(req.params.id);
+    if(!isNaN(bookId)=== false){
+        return res.status(400).json({message: 'Invalid book ID', error: 'Bad Request'});
+    } 
+    const { title, author } = req.body;
+    const bookIndex = books.findIndex(b => b.id === bookId);
+    if(bookIndex === -1){
+        return res.status(404).json({message: 'Book not found', error: 'Not Found'});
+    }
+    books[bookIndex] = { id: bookId, title, author };
+    res.json({message: 'Book updated successfully', book: books[bookIndex]});
+});
 
 // delete book
 app.delete('/books/:id', (req,res)=>{
